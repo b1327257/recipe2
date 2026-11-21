@@ -940,31 +940,64 @@ function openForm(id){
   showView("vForm");
 }
 
-// ---- Backup Export / Import ----
-function triggerDownload(name,text,mime,doneMsg){
-  var b=new Blob([text],{type:mime});
-  var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=name;
+// ---- Backup Export / Import (with full PDF data) ----
+function triggerDownloadBlob(name,blob,doneMsg){
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download=name;
   document.body.appendChild(a);a.click();
-  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500);
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1500);
   if(doneMsg)toast(doneMsg);
 }
-function exportJson(name,text,doneMsg){
+function exportJsonBlob(name,blob,doneMsg){
   var mime="application/json;charset=utf-8";
   var isLocal=location.protocol==="file:";
   if(isLocal&&window.File&&navigator.canShare&&navigator.share){
     try{
-      var file=new File([text],name,{type:mime});
+      var file=new File([blob],name,{type:mime});
       if(navigator.canShare({files:[file]})){
         navigator.share({files:[file],title:name}).then(function(){
           if(doneMsg)toast(doneMsg);
         }).catch(function(err){
-          if(err&&err.name!=="AbortError")triggerDownload(name,text,mime,doneMsg);
+          if(err&&err.name!=="AbortError")triggerDownloadBlob(name,blob,doneMsg);
         });
         return;
       }
     }catch(e){}
   }
-  triggerDownload(name,text,mime,doneMsg);
+  triggerDownloadBlob(name,blob,doneMsg);
+}
+function bufToBase64(buf,cb){
+  var fr=new FileReader();
+  fr.onload=function(){
+    var res=String(fr.result||"");
+    var i=res.indexOf(",");
+    cb(i>=0?res.slice(i+1):"");
+  };
+  fr.onerror=function(){cb("")};
+  fr.readAsDataURL(new Blob([buf],{type:"application/pdf"}));
+}
+function base64ToBuf(b64,cb){
+  try{
+    if(window.fetch){
+      fetch("data:application/pdf;base64,"+b64).then(function(r){return r.arrayBuffer()}).then(function(buf){
+        cb(buf);
+      }).catch(function(){
+        cb(base64ToBufSync(b64));
+      });
+      return;
+    }
+  }catch(e){}
+  cb(base64ToBufSync(b64));
+}
+function base64ToBufSync(b64){
+  try{
+    var bin=atob(b64);
+    var len=bin.length;
+    var u8=new Uint8Array(len);
+    for(var i=0;i<len;i++)u8[i]=bin.charCodeAt(i);
+    return u8.buffer;
+  }catch(e){return null}
 }
 
 // ---- Confirm Dialog ----
@@ -1130,47 +1163,137 @@ $("fReattach").onchange=function(){
   fr.readAsArrayBuffer(f);
 };
 
+var backupBusy=false;
 $("btnExport").onclick=function(){
   $("menuSheet").hidden=true;
+  if(backupBusy){toast("処理中です...");return}
   if(!books.length){toast("書き出すデータがありません");return}
-  lastExported=Date.now();
-  metaPut("lastExported",lastExported);
-  updateStorageStat();
-  var payload=JSON.stringify({app:"recipe-shelf",version:1,exported:new Date().toISOString(),books:books},null,2);
-  exportJson("recipe_shelf_"+todayStr()+".json",payload,books.length+"冊のデータを書き出しました");
+  backupBusy=true;
+  var list=books.slice();
+  var parts=['{"app":"recipe-shelf","version":2,"exported":',JSON.stringify(new Date().toISOString()),',"books":['];
+  var idx=0, pdfCnt=0;
+
+  function next(){
+    if(idx>=list.length){
+      parts.push("]}");
+      var blob=new Blob(parts,{type:"application/json;charset=utf-8"});
+      parts=null;
+      lastExported=Date.now();
+      metaPut("lastExported",lastExported);
+      updateStorageStat();
+      backupBusy=false;
+      var msg=list.length+"冊を書き出しました"+(pdfCnt?"（PDF "+pdfCnt+"件含む）":"");
+      exportJsonBlob("recipe_shelf_"+todayStr()+".json",blob,msg);
+      return;
+    }
+    var b=list[idx];
+    toast("バックアップ作成中... ("+(idx+1)+"/"+list.length+")");
+    pdfGet(b.id,function(rec){
+      var meta={
+        id:b.id,
+        title:b.title,
+        cover:b.cover||"",
+        fav:!!b.fav,
+        fileName:b.fileName||"",
+        size:b.size||0,
+        createdAt:b.createdAt||Date.now(),
+        openedAt:b.openedAt||0
+      };
+      var prefix=(idx>0?",":"");
+      if(rec&&rec.data){
+        bufToBase64(rec.data,function(b64){
+          if(b64){
+            pdfCnt++;
+            var metaStr=JSON.stringify(meta);
+            parts.push(prefix,metaStr.slice(0,-1),',"pdfBase64":"',b64,'"}');
+          }else{
+            parts.push(prefix,JSON.stringify(meta));
+          }
+          idx++;
+          setTimeout(next,0);
+        });
+      }else{
+        parts.push(prefix,JSON.stringify(meta));
+        idx++;
+        setTimeout(next,0);
+      }
+    });
+  }
+  next();
 };
-$("btnImport").onclick=function(){$("menuSheet").hidden=true;$("fImport").click()};
+$("btnImport").onclick=function(){
+  $("menuSheet").hidden=true;
+  if(backupBusy){toast("処理中です...");return}
+  $("fImport").click();
+};
 $("fImport").onchange=function(){
   var f=this.files[0];this.value="";if(!f)return;
+  backupBusy=true;
+  toast("バックアップを読み込み中...");
   var fr=new FileReader();
   fr.onload=function(){
+    var arr=null;
     try{
       var j=JSON.parse(fr.result);
-      var arr=Array.isArray(j)?j:j.books;
+      arr=Array.isArray(j)?j:j.books;
       if(!Array.isArray(arr))throw 0;
-      var n=0;
-      arr.forEach(function(item){
-        if(!item||!item.title)return;
-        var rec={
-          id:item.id||uid(),
-          title:String(item.title),
-          cover:item.cover||"",
-          fav:!!item.fav,
-          fileName:item.fileName||"",
-          size:item.size||0,
-          createdAt:item.createdAt||Date.now(),
-          openedAt:item.openedAt||0
-        };
-        var idx=books.findIndex(function(x){return x.id===rec.id});
-        if(idx>=0)books[idx]=rec;else books.push(rec);
-        n++;
-      });
-      saveBooks();
-      renderShelf();
-      showView("vShelf");
-      backfillCovers();
-      toast(n+"冊のデータを読み込みました");
-    }catch(e){toast("読み込めないファイルです")}
+    }catch(e){
+      backupBusy=false;
+      toast("読み込めないファイルです");
+      return;
+    }
+    var idx=0, n=0, pdfCnt=0;
+    function next(){
+      if(idx>=arr.length){
+        saveBooks(function(){
+          backupBusy=false;
+          renderShelf();
+          showView("vShelf");
+          backfillCovers();
+          var msg=n+"冊を読み込みました"+(pdfCnt?"（PDF "+pdfCnt+"件復元）":"");
+          toast(msg);
+        });
+        return;
+      }
+      var item=arr[idx];
+      idx++;
+      if(!item||!item.title){setTimeout(next,0);return}
+      var rec={
+        id:item.id||uid(),
+        title:String(item.title),
+        cover:item.cover||"",
+        fav:!!item.fav,
+        fileName:item.fileName||"",
+        size:item.size||0,
+        createdAt:item.createdAt||Date.now(),
+        openedAt:item.openedAt||0
+      };
+      var b64=typeof item.pdfBase64==="string"?item.pdfBase64:"";
+      item.pdfBase64=null;
+      var ex=books.findIndex(function(x){return x.id===rec.id});
+      if(ex>=0)books[ex]=rec;else books.push(rec);
+      n++;
+      if(b64){
+        toast("復元中... ("+idx+"/"+arr.length+")");
+        base64ToBuf(b64,function(buf){
+          if(buf){
+            pdfPut(rec.id,{data:buf,name:rec.fileName||(rec.title+".pdf"),size:buf.byteLength||rec.size,type:"application/pdf"},function(ok){
+              if(ok)pdfCnt++;
+              setTimeout(next,0);
+            });
+          }else{
+            setTimeout(next,0);
+          }
+        });
+      }else{
+        setTimeout(next,0);
+      }
+    }
+    next();
+  };
+  fr.onerror=function(){
+    backupBusy=false;
+    toast("ファイルを読み込めませんでした");
   };
   fr.readAsText(f);
 };
