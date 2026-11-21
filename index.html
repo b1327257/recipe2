@@ -133,7 +133,6 @@ button,a.btn{
 button:active,a.btn:active{transform:scale(.97)}
 button:disabled{opacity:.45;cursor:default;transform:none}
 button.primary,a.btn.primary{background:var(--acc);color:var(--acc-ink);border-color:transparent;font-weight:600}
-button.ghost{background:transparent;border-color:transparent;color:var(--sub)}
 button.danger{color:var(--danger);border-color:var(--danger-soft)}
 button.danger.primary{background:var(--danger);color:#fff;border-color:transparent}
 button:focus-visible,a.btn:focus-visible,input:focus-visible,select:focus-visible{
@@ -194,8 +193,12 @@ select{width:auto;padding:8px 12px;font-size:13.5px}
 @media (min-width:640px){
   .shelf{grid-template-columns:repeat(auto-fill,minmax(174px,1fr));gap:34px 24px}
 }
+.book-card{
+  position:relative;
+  display:flex;flex-direction:column;
+}
 .book{
-  background:none;border:none;padding:0;min-height:auto;
+  background:none;border:none;padding:0;min-height:auto;width:100%;
   display:flex;flex-direction:column;align-items:stretch;text-align:left;
   border-radius:0;cursor:pointer;
 }
@@ -233,11 +236,21 @@ select{width:auto;padding:8px 12px;font-size:13.5px}
   overflow-wrap:anywhere;
 }
 .fav-dot{
-  position:absolute;top:8px;right:8px;z-index:2;
+  position:absolute;top:8px;left:8px;z-index:2;
   width:24px;height:24px;border-radius:50%;
   background:rgba(0,0,0,.48);backdrop-filter:blur(6px);
   color:#ffd15c;display:grid;place-items:center;font-size:12px;
+  pointer-events:none;
 }
+.book-more{
+  position:absolute;top:6px;right:6px;z-index:3;
+  width:32px;height:32px;min-height:32px;padding:0;border-radius:50%;
+  border:none;background:rgba(0,0,0,.46);color:#fff;
+  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.book-more:active{transform:scale(.92)}
+.book-more .ico{width:16px;height:16px}
 .book-meta{padding:10px 2px 0;display:flex;flex-direction:column;gap:2px}
 .book-title{
   font-size:14px;font-weight:600;line-height:1.35;color:var(--ink);
@@ -247,6 +260,7 @@ select{width:auto;padding:8px 12px;font-size:13.5px}
 .book-sub{
   font-size:12px;color:var(--sub);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  font-variant-numeric:tabular-nums;
 }
 
 /* List View */
@@ -254,11 +268,14 @@ select{width:auto;padding:8px 12px;font-size:13.5px}
 @media (min-width:700px){
   .shelf.list-view{grid-template-columns:repeat(2,1fr);gap:12px 16px}
 }
-.shelf.list-view .book{
-  flex-direction:row;align-items:center;gap:14px;
+.shelf.list-view .book-card{
+  flex-direction:row;align-items:center;
   background:var(--card);border:1px solid var(--line);
-  border-radius:var(--r-md);padding:10px 12px;
-  box-shadow:var(--sh-card);
+  border-radius:var(--r-md);padding:10px 8px 10px 12px;
+  box-shadow:var(--sh-card);gap:6px;
+}
+.shelf.list-view .book{
+  flex-direction:row;align-items:center;gap:14px;flex:1;min-width:0;
 }
 .shelf.list-view .cover-wrap{
   width:52px;height:70px;aspect-ratio:auto;flex:none;
@@ -268,9 +285,13 @@ select{width:auto;padding:8px 12px;font-size:13.5px}
 .shelf.list-view .gen-cover{padding:6px 5px 5px 7px}
 .shelf.list-view .gen-cover-band{display:none}
 .shelf.list-view .gen-cover-title{font-size:8.5px;-webkit-line-clamp:3;line-height:1.25}
-.shelf.list-view .fav-dot{width:18px;height:18px;font-size:10px;top:3px;right:3px}
+.shelf.list-view .fav-dot{width:18px;height:18px;font-size:10px;top:3px;left:3px}
 .shelf.list-view .book-meta{padding:0;flex:1;min-width:0;gap:3px}
 .shelf.list-view .book-title{font-size:15px;-webkit-line-clamp:1}
+.shelf.list-view .book-more{
+  position:static;flex:none;width:36px;height:36px;min-height:36px;
+  background:transparent;color:var(--sub);backdrop-filter:none;-webkit-backdrop-filter:none;
+}
 
 /* Views */
 .view{display:none;animation:fadeUp .18s ease}
@@ -283,43 +304,6 @@ select{width:auto;padding:8px 12px;font-size:13.5px}
 }
 .empty[hidden]{display:none}
 .empty p{margin:0 0 18px;font-size:15px}
-
-/* Detail View */
-.bar{display:flex;align-items:center;gap:8px;margin-bottom:20px}
-.bar .sp{flex:1}
-.detail-hero{
-  display:grid;grid-template-columns:132px 1fr;gap:20px;align-items:start;
-  margin-bottom:24px;
-}
-@media (min-width:640px){
-  .detail-hero{grid-template-columns:180px 1fr;gap:28px}
-}
-.detail-cover{
-  display:block;width:100%;aspect-ratio:3/4;border-radius:5px 12px 12px 5px;
-  overflow:hidden;box-shadow:var(--sh-book);position:relative;background:#fff;
-  text-decoration:none;color:inherit;
-}
-.detail-cover::after{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background:linear-gradient(90deg,rgba(255,255,255,.22) 0%,rgba(0,0,0,.14) 2.2%,rgba(255,255,255,.1) 4.2%,rgba(0,0,0,0) 9%);
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);
-}
-.detail-cover img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
-.detail-info{min-width:0}
-.detail-info h2{margin:0 0 8px;font-size:22px;line-height:1.35;overflow-wrap:anywhere}
-.detail-meta{font-size:12.5px;color:var(--muted);margin:0;font-variant-numeric:tabular-nums}
-.pdf-acts{display:flex;gap:10px;margin-bottom:24px}
-.pdf-acts .primary{flex:1;min-height:48px;font-size:15.5px}
-.missing-pdf{
-  padding:12px 14px;border-radius:var(--r-md);
-  background:var(--danger-soft);color:var(--danger);
-  font-size:13.5px;font-weight:500;margin-bottom:18px;
-  display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
-}
-.detail-foot{
-  display:flex;gap:10px;justify-content:flex-end;
-  margin-top:28px;padding-top:16px;border-top:1px solid var(--line);
-}
 
 /* Form View */
 .form-wrap{max-width:600px;margin:0 auto}
@@ -366,7 +350,17 @@ label.flbl{display:block;font-size:13px;font-weight:600;color:var(--sub);margin:
   .ov{align-items:center}
   .sh{border-radius:18px;margin:16px;padding:18px}
 }
-.sh button{justify-content:flex-start;padding:12px 14px;border-color:var(--line);font-weight:500}
+.sh button,.sh a.btn{justify-content:flex-start;padding:12px 14px;border-color:var(--line);font-weight:500}
+.sh-head{
+  padding:4px 4px 10px;border-bottom:1px solid var(--line);margin-bottom:2px;
+}
+.sh-head-title{
+  font-size:15.5px;font-weight:600;color:var(--ink);line-height:1.35;
+  overflow-wrap:anywhere;
+}
+.sh-head-meta{
+  font-size:12px;color:var(--sub);margin-top:2px;font-variant-numeric:tabular-nums;
+}
 .sh-stat{
   display:flex;justify-content:space-between;align-items:center;
   padding:10px 14px;border-radius:var(--r-md);background:var(--bg-sub);
@@ -438,9 +432,6 @@ label.flbl{display:block;font-size:13px;font-weight:600;color:var(--sub);margin:
     <div class="empty" id="empty" hidden></div>
   </section>
 
-  <!-- Detail View -->
-  <section class="view" id="vDetail"></section>
-
   <!-- Form View -->
   <section class="view" id="vForm">
     <div class="form-wrap">
@@ -467,6 +458,29 @@ label.flbl{display:block;font-size:13px;font-weight:600;color:var(--sub);margin:
     </div>
   </section>
 </main>
+
+<!-- Book Action Sheet -->
+<div id="bookSheet" class="ov" hidden>
+  <div class="sh">
+    <div class="sh-head">
+      <div class="sh-head-title" id="bsTitle"></div>
+      <div class="sh-head-meta" id="bsMeta"></div>
+    </div>
+    <button type="button" id="bsFav">
+      <svg class="ico" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span id="bsFavLbl">お気に入り</span>
+    </button>
+    <button type="button" id="bsEdit">
+      <svg class="ico" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      <span>タイトル・PDFを編集</span>
+    </button>
+    <button type="button" class="danger" id="bsDel">
+      <svg class="ico" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+      <span>この本を削除</span>
+    </button>
+    <button type="button" id="bsClose" style="justify-content:center;color:var(--sub);border-color:transparent">閉じる</button>
+  </div>
+</div>
 
 <!-- Menu Sheet -->
 <input type="file" id="fImport" accept="application/json,.json" hidden>
@@ -509,9 +523,9 @@ var DB_NAME="recipe-shelf-db", DB_VER=1, ST_META="meta", ST_PDFS="pdfs";
 var PDFJS_CDN="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
 
 var db=null, books=[], viewMode="grid", sortMode="opened", favOnly=false;
-var curView="vShelf", curId=null, editingId=null, lastExported=0;
+var curView="vShelf", editingId=null, sheetBookId=null, reattachId=null, lastExported=0;
 var formPdfFile=null, formPdfBuf=null, formCover="";
-var curDetailBlobUrl="";
+var activeBlobUrl="";
 
 var pdfjsReady=false, pdfjsLoading=null;
 var $=function(id){return document.getElementById(id)};
@@ -673,7 +687,6 @@ function backfillCovers(){
         target.cover=uri;
         saveBooks();
         if(curView==="vShelf")renderShelf();
-        else if(curView==="vDetail"&&curId===target.id)renderDetail(target.id);
       }
       backfillRunning=false;
       backfillCovers();
@@ -707,19 +720,101 @@ function todayStr(){
   var d=new Date();
   return d.getFullYear()+("0"+(d.getMonth()+1)).slice(-2)+("0"+d.getDate()).slice(-2);
 }
-function coverInnerHTML(b,isDetail){
+function coverInnerHTML(b){
   if(b.cover)return '<img src="'+esc(b.cover)+'" alt="">';
-  var sz=isDetail?' style="font-size:17px"':"";
   return '<div class="gen-cover">'
-    +'<div><div class="gen-cover-band"></div><div class="gen-cover-title"'+sz+'>'+esc(b.title)+'</div></div>'
+    +'<div><div class="gen-cover-band"></div><div class="gen-cover-title">'+esc(b.title)+'</div></div>'
     +'<div></div>'
     +'</div>';
 }
 function showView(id){
   curView=id;
-  ["vShelf","vDetail","vForm"].forEach(function(v){$(v).classList.toggle("show",v===id)});
+  ["vShelf","vForm"].forEach(function(v){$(v).classList.toggle("show",v===id)});
   window.scrollTo(0,0);
 }
+
+// ---- Direct PDF Open (Native Browser Viewer) ----
+function openBookPdf(id){
+  var b=books.find(function(x){return x.id===id});
+  if(!b)return;
+  var win=null;
+  try{win=window.open("","_blank")}catch(e){}
+  pdfGet(b.id,function(rec){
+    if(!rec||!rec.data){
+      if(win){try{win.close()}catch(e){}}
+      reattachId=b.id;
+      ask("「"+b.title+"」のPDF本体がこの端末に未保存です。PDFを選択して紐付けますか？","PDFを選択",function(){
+        $("fReattach").click();
+      });
+      return;
+    }
+    b.openedAt=Date.now();
+    saveBooks();
+    renderShelf();
+
+    if(activeBlobUrl){try{URL.revokeObjectURL(activeBlobUrl)}catch(e){}}
+    var blob=new Blob([rec.data],{type:"application/pdf"});
+    activeBlobUrl=URL.createObjectURL(blob);
+
+    if(win){
+      try{
+        win.location.replace(activeBlobUrl);
+        return;
+      }catch(e){}
+    }
+    var a=document.createElement("a");
+    a.href=activeBlobUrl;
+    a.target="_blank";
+    a.rel="noopener";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
+}
+
+// ---- Book Action Sheet ----
+function openBookSheet(id){
+  var b=books.find(function(x){return x.id===id});
+  if(!b)return;
+  sheetBookId=b.id;
+  $("bsTitle").textContent=b.title;
+  var parts=[];
+  if(b.size)parts.push(fmtSize(b.size));
+  if(b.openedAt)parts.push("最終閲覧 "+fmtDate(b.openedAt));
+  else if(b.createdAt)parts.push("追加 "+fmtDate(b.createdAt));
+  $("bsMeta").textContent=parts.join(" ・ ");
+  $("bsFavLbl").textContent=b.fav?"お気に入りを解除":"お気に入りに追加";
+  $("bookSheet").hidden=false;
+}
+function closeBookSheet(){$("bookSheet").hidden=true;sheetBookId=null}
+
+$("bsClose").onclick=closeBookSheet;
+$("bookSheet").onclick=function(e){if(e.target===this)closeBookSheet()};
+$("bsFav").onclick=function(){
+  var b=books.find(function(x){return x.id===sheetBookId});
+  closeBookSheet();
+  if(!b)return;
+  b.fav=!b.fav;
+  saveBooks();
+  renderShelf();
+};
+$("bsEdit").onclick=function(){
+  var id=sheetBookId;
+  closeBookSheet();
+  if(id)openForm(id);
+};
+$("bsDel").onclick=function(){
+  var b=books.find(function(x){return x.id===sheetBookId});
+  closeBookSheet();
+  if(!b)return;
+  ask("「"+b.title+"」を本棚から削除しますか？","削除",function(){
+    books=books.filter(function(x){return x.id!==b.id});
+    saveBooks();
+    pdfDelete(b.id);
+    renderShelf();
+    toast("削除しました");
+  });
+};
 
 // ---- Shelf Render ----
 function renderShelf(){
@@ -761,12 +856,16 @@ function renderShelf(){
   shelfEl.innerHTML=list.map(function(b){
     var fav=b.fav?'<span class="fav-dot" aria-label="お気に入り">★</span>':"";
     var sub=b.size?fmtSize(b.size):"";
-    return '<button type="button" class="book" data-id="'+b.id+'">'
-      +'<div class="cover-wrap">'+coverInnerHTML(b,false)+fav+'</div>'
+    return '<div class="book-card">'
+      +'<button type="button" class="book" data-id="'+b.id+'">'
+      +'<div class="cover-wrap">'+coverInnerHTML(b)+fav+'</div>'
       +'<div class="book-meta">'
       +'<div class="book-title">'+esc(b.title)+'</div>'
       +(sub?'<div class="book-sub">'+esc(sub)+'</div>':"")
-      +'</div></button>';
+      +'</div></button>'
+      +'<button type="button" class="book-more" data-more="'+b.id+'" aria-label="操作メニュー">'
+      +'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/></svg>'
+      +'</button></div>';
   }).join("");
 
   var emptyEl=$("empty");
@@ -787,95 +886,6 @@ function updateStorageStat(){
   var total=books.reduce(function(acc,b){return acc+(b.size||0)},0);
   $("storageStat").textContent=books.length+"冊 / "+fmtSize(total);
   $("exportLbl").textContent=lastExported?"バックアップを書き出す（前回 "+fmtDate(lastExported)+"）":"バックアップを書き出す";
-}
-
-// ---- Detail View ----
-function renderDetail(id){
-  var b=books.find(function(x){return x.id===id});
-  if(!b){showView("vShelf");return}
-  curId=b.id;
-
-  if(curDetailBlobUrl){try{URL.revokeObjectURL(curDetailBlobUrl)}catch(e){}curDetailBlobUrl=""}
-
-  pdfGet(b.id,function(rec){
-    var hasPdf=!!(rec&&rec.data);
-    if(hasPdf){
-      var blob=new Blob([rec.data],{type:"application/pdf"});
-      curDetailBlobUrl=URL.createObjectURL(blob);
-      if(!b.cover&&!b._triedCover){
-        b._triedCover=true;
-        generateCoverFromBuffer(rec.data,function(uri){
-          if(uri){b.cover=uri;saveBooks();if(curId===b.id&&curView==="vDetail")renderDetail(b.id)}
-        });
-      }
-    }
-
-    var metaParts=[];
-    if(b.size)metaParts.push(fmtSize(b.size));
-    if(b.openedAt)metaParts.push("最終閲覧 "+fmtDate(b.openedAt));
-    else if(b.createdAt)metaParts.push("追加 "+fmtDate(b.createdAt));
-
-    var missingHtml=hasPdf?"":'<div class="missing-pdf"><span>PDF本体がこの端末に未保存です</span><button type="button" class="primary" id="dReattach" style="min-height:34px;padding:4px 12px;font-size:13px">PDFを再紐付け</button></div>';
-
-    var coverEl=hasPdf
-      ?'<a class="detail-cover" id="dCoverTap" href="'+esc(curDetailBlobUrl)+'" target="_blank" rel="noopener">'+coverInnerHTML(b,true)+'</a>'
-      :'<div class="detail-cover">'+coverInnerHTML(b,true)+'</div>';
-
-    var openBtnHtml=hasPdf
-      ?'<a class="btn primary" id="dOpen" href="'+esc(curDetailBlobUrl)+'" target="_blank" rel="noopener">'
-        +'<svg class="ico" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
-        +'<span>PDFを開く</span></a>'
-      :'<button type="button" class="primary" disabled>'
-        +'<svg class="ico" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'
-        +'<span>PDFを開く</span></button>';
-
-    var h='<div class="bar">'
-      +'<button type="button" class="ghost" id="dBack" style="padding-left:4px">← 本棚</button>'
-      +'<span class="sp"></span>'
-      +'<button type="button" id="dFav" style="min-width:44px">'+(b.fav?"★":"☆")+'</button>'
-      +'<button type="button" id="dEdit">編集</button>'
-      +'</div>'
-      +missingHtml
-      +'<div class="detail-hero">'
-      +coverEl
-      +'<div class="detail-info">'
-      +'<h2>'+esc(b.title)+'</h2>'
-      +'<p class="detail-meta">'+esc(metaParts.join(" ・ "))+'</p>'
-      +'</div></div>'
-      +'<div class="pdf-acts">'+openBtnHtml+'</div>'
-      +'<div class="detail-foot"><button type="button" class="danger" id="dDel">この本を削除</button></div>';
-
-    $("vDetail").innerHTML=h;
-
-    $("dBack").onclick=function(){renderShelf();showView("vShelf")};
-    $("dFav").onclick=function(){
-      b.fav=!b.fav;
-      saveBooks();
-      $("dFav").textContent=b.fav?"★":"☆";
-    };
-    $("dEdit").onclick=function(){openForm(b.id)};
-
-    var markOpened=function(){
-      b.openedAt=Date.now();
-      saveBooks();
-    };
-    if($("dOpen"))$("dOpen").onclick=markOpened;
-    if($("dCoverTap"))$("dCoverTap").onclick=markOpened;
-    if($("dReattach")){
-      $("dReattach").onclick=function(){$("fReattach").click()};
-    }
-    $("dDel").onclick=function(){
-      ask("「"+b.title+"」を本棚から削除しますか？","削除",function(){
-        books=books.filter(function(x){return x.id!==b.id});
-        saveBooks();
-        pdfDelete(b.id);
-        renderShelf();
-        showView("vShelf");
-        toast("削除しました");
-      });
-    };
-    showView("vDetail");
-  });
 }
 
 // ---- Form View ----
@@ -942,6 +952,7 @@ function ask(msg,yesTxt,fn){
   dlgFn=fn;
   $("dlgMsg").textContent=msg;
   $("dlgYes").textContent=yesTxt||"OK";
+  $("dlgYes").className=(yesTxt==="削除")?"primary danger":"primary";
   $("dlg").hidden=false;
 }
 function closeDlg(){$("dlg").hidden=true;dlgFn=null}
@@ -970,8 +981,14 @@ $("tagBar").onclick=function(e){
   if(b.getAttribute("data-fav")){favOnly=!favOnly;renderShelf()}
 };
 $("shelf").onclick=function(e){
+  var m=e.target.closest("[data-more]");
+  if(m){
+    e.stopPropagation();
+    openBookSheet(m.getAttribute("data-more"));
+    return;
+  }
   var c=e.target.closest(".book");
-  if(c)renderDetail(c.getAttribute("data-id"));
+  if(c)openBookPdf(c.getAttribute("data-id"));
 };
 $("empty").onclick=function(e){
   if(e.target.id==="emptyAdd")openForm(null);
@@ -1007,7 +1024,7 @@ $("fPdf").onchange=function(){
   };
   fr.readAsArrayBuffer(f);
 };
-$("btnCancel").onclick=function(){editingId?renderDetail(editingId):showView("vShelf")};
+$("btnCancel").onclick=function(){showView("vShelf")};
 $("btnSave").onclick=function(){
   var title=$("fTitle").value.trim();
   if(!editingId&&!formPdfFile){toast("PDFファイルを選択してください");return}
@@ -1038,7 +1055,7 @@ $("btnSave").onclick=function(){
     saveBooks(function(ok){
       if(!ok){toast("保存に失敗しました");return}
       renderShelf();
-      renderDetail(id);
+      showView("vShelf");
       toast("保存しました");
     });
   }
@@ -1071,8 +1088,10 @@ $("btnSave").onclick=function(){
 };
 
 $("fReattach").onchange=function(){
-  var f=this.files[0];this.value="";if(!f||!curId)return;
-  var b=books.find(function(x){return x.id===curId});if(!b)return;
+  var f=this.files[0];this.value="";if(!f||!reattachId)return;
+  var b=books.find(function(x){return x.id===reattachId});
+  reattachId=null;
+  if(!b)return;
   var fr=new FileReader();
   fr.onload=function(){
     var buf=fr.result;
@@ -1082,7 +1101,7 @@ $("fReattach").onchange=function(){
       generateCoverFromBuffer(buf,function(uri){
         if(uri)b.cover=uri;
         saveBooks();
-        renderDetail(b.id);
+        renderShelf();
         toast("PDFを紐付けました");
       });
     });
