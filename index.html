@@ -474,6 +474,10 @@ label.flbl{display:block;font-size:13px;font-weight:600;color:var(--sub);margin:
       <svg class="ico" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
       <span>タイトル・PDFを編集</span>
     </button>
+    <button type="button" id="bsRegen">
+      <svg class="ico" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      <span>表紙を作り直す</span>
+    </button>
     <button type="button" class="danger" id="bsDel">
       <svg class="ico" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
       <span>この本を削除</span>
@@ -520,7 +524,7 @@ label.flbl{display:block;font-size:13px;font-weight:600;color:var(--sub);margin:
 (function(){
 "use strict";
 var DB_NAME="recipe-shelf-db", DB_VER=1, ST_META="meta", ST_PDFS="pdfs";
-var PDFJS_CDN="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+var PDFJS_CDN="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/";
 
 var db=null, books=[], viewMode="grid", sortMode="opened", favOnly=false;
 var curView="vShelf", editingId=null, sheetBookId=null, reattachId=null, lastExported=0;
@@ -535,7 +539,7 @@ function loadPdfJs(cb){
   if(window.pdfjsLib){
     if(!pdfjsReady){
       pdfjsReady=true;
-      try{window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_CDN+"pdf.worker.min.js"}catch(e){}
+      try{window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_CDN+"build/pdf.worker.min.js"}catch(e){}
     }
     cb(window.pdfjsLib);
     return;
@@ -543,11 +547,11 @@ function loadPdfJs(cb){
   if(pdfjsLoading){pdfjsLoading.push(cb);return}
   pdfjsLoading=[cb];
   var s=document.createElement("script");
-  s.src=PDFJS_CDN+"pdf.min.js";
+  s.src=PDFJS_CDN+"build/pdf.min.js";
   s.async=true;
   s.onload=function(){
     pdfjsReady=true;
-    try{window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_CDN+"pdf.worker.min.js"}catch(e){}
+    try{window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_CDN+"build/pdf.worker.min.js"}catch(e){}
     var q=pdfjsLoading;pdfjsLoading=null;
     q.forEach(function(fn){fn(window.pdfjsLib)});
   };
@@ -565,6 +569,7 @@ function openPdfDocument(lib,arrayBuf,cb){
     cMapUrl:PDFJS_CDN+"cmaps/",
     cMapPacked:true,
     standardFontDataUrl:PDFJS_CDN+"standard_fonts/",
+    useSystemFonts:true,
     disableWorker:(location.protocol==="file:")
   };
   lib.getDocument(opts).promise.then(function(doc){
@@ -802,6 +807,22 @@ $("bsEdit").onclick=function(){
   var id=sheetBookId;
   closeBookSheet();
   if(id)openForm(id);
+};
+$("bsRegen").onclick=function(){
+  var b=books.find(function(x){return x.id===sheetBookId});
+  closeBookSheet();
+  if(!b)return;
+  toast("表紙を再生成中...");
+  pdfGet(b.id,function(rec){
+    if(!rec||!rec.data){toast("PDFデータが見つかりません");return}
+    generateCoverFromBuffer(rec.data,function(uri){
+      if(!uri){toast("表紙を生成できませんでした");return}
+      b.cover=uri;
+      saveBooks();
+      renderShelf();
+      toast("表紙を更新しました");
+    });
+  });
 };
 $("bsDel").onclick=function(){
   var b=books.find(function(x){return x.id===sheetBookId});
